@@ -227,7 +227,7 @@ def cambio_oracion():
             oracion_visible = False
 #----------------------------------------Configuración del GUI--------------------------------------------
 app = ctk.CTk()
-app.title("Pomodoro")
+app.title("Cathodoro")
 ctk.set_appearance_mode("Dark")
 app.configure(fg_color=("white", "black"))
 
