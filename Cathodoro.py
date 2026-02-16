@@ -12,7 +12,7 @@ import platform
 pomodoro = 25*60
 descanso_corto= 5*60
 descanso_largo = 10*60
-tick = 1
+tick = 1000
 
 #Variables de funcionamiento
 timer = None
@@ -191,6 +191,7 @@ def abrir_configuracion ():
 
     def guardar_ajustes():
         global pomodoro,descanso_largo,descanso_corto,sonido_activo
+        
 
         try:
             nuevo_pomodoro = int(entrada_pomodoro.get()) * 60
@@ -201,16 +202,22 @@ def abrir_configuracion ():
                 #print("Los tiempos deben ser mayores a 0") #Nota_dev 2: Agregar popup
                 return
             
+            cambio_efectuado = ((nuevo_pomodoro != pomodoro) 
+                                or (nuevo_descanso_corto != descanso_corto) 
+                                or (nuevo_descanso_largo != descanso_largo))
+            
             sonido_activo = bool(switch_sonido.get())
+
             pomodoro = nuevo_pomodoro
             descanso_corto = nuevo_descanso_corto
             descanso_largo = nuevo_descanso_largo
 
-            reset_contador()
+            if cambio_efectuado:
+                reset_contador()
             ventana_config.destroy()
 
         except ValueError:
-            print("ERROR")
+            print("ERROR") #Agregar popup
     
     #Creamos una ventana scrolleable 
     marco_scroll= ctk.CTkScrollableFrame(ventana_config,fg_color="transparent")
