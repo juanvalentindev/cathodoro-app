@@ -32,6 +32,9 @@ oracion_visible = False
 #Detección del Sistema (Para sonidos)
 sistema_actual = platform.system()
 
+#Variable para activación de sonido 
+sonido_activo = True
+
 #----------------------------------------Funciónes Del Temporizador---------------------------------------
 
 #Funcion de detección de sistema (Para sonidos)
@@ -84,8 +87,10 @@ def rebajar_contador():
                   #primero corremos el inicio de contador despues de un segundo , y luego en la función de bajar el contador, restamos un segundo, ya que esperamos para entrar otro
         timer = app.after(tick,rebajar_contador) #cada 1000ms ejecuta rebajar contador
     else:
-        print(f"Buscando audio en: {ruta_sonido}")
-        reproducir_sonido(ruta_sonido)
+        #Reproducción de sonido
+        if sonido_activo:
+            reproducir_sonido(ruta_sonido)
+        
         #Contadores visuales
         if (reps % 8) == 0:
             c_descanso_largo += 1 
@@ -96,14 +101,19 @@ def rebajar_contador():
         
         informacion_pomodoro.configure(text=f"Pomodoro {c_pomodoro} | Descanso {c_descanso} | Descanso largo {c_descanso_largo}")
         reps += 1
-        corriendo =False
-        timer = None
-        boton_stop.configure(text="▶", command=iniciar_contador)
 
-        if (reps % 2) == 0:
-            condicion_pomodoro.configure(text="¡Tiempo! Toca descanso")
-        else:
-            condicion_pomodoro.configure(text="¡A trabajar!")
+        corriendo = False
+        timer = None
+
+        iniciar_contador()
+        
+        #Nota_dev 3 = Implementar opción para cambiar de modo de inicio de temporizador 
+        #boton_stop.configure(text="▶", command=iniciar_contador)
+
+        #if (reps % 2) == 0:
+        #    condicion_pomodoro.configure(text="¡Tiempo! Toca descanso")
+        #else:
+        #    condicion_pomodoro.configure(text="¡A trabajar!")
         
 
 
@@ -145,12 +155,12 @@ def saltar_instancia():
     parar_contador()
     
     #Nota_dev 1: al saltar la instancia, no se ha terminado el pomodoro, por tanto no tiene sentido aumentar su cantidad...
-    if (reps % 8) == 0:
-        c_descanso_largo += 1 
-    elif (reps % 2) == 0:
-        c_descanso += 1       
-    else:
-        c_pomodoro += 1       
+    #if (reps % 8) == 0:
+    #    c_descanso_largo += 1 
+    #elif (reps % 2) == 0:
+    #    c_descanso += 1       
+    #else:
+    #    c_pomodoro += 1       
         
     reps += 1
     
@@ -168,7 +178,7 @@ def abrir_configuracion ():
     #Configuración de la Ventana de Configuración 
     ventana_config = ctk.CTkToplevel(app)
     ventana_config.title("Ajustes")
-    ventana_config.geometry("230x335")
+    ventana_config.geometry("260x400")
     ventana_config.configure(fg_color=("white", "black"))
     ventana_config.attributes("-topmost", True)
 
@@ -180,7 +190,7 @@ def abrir_configuracion ():
 
 
     def guardar_ajustes():
-        global pomodoro,descanso_largo,descanso_corto
+        global pomodoro,descanso_largo,descanso_corto,sonido_activo
 
         try:
             nuevo_pomodoro = int(entrada_pomodoro.get()) * 60
@@ -191,6 +201,7 @@ def abrir_configuracion ():
                 #print("Los tiempos deben ser mayores a 0") #Nota_dev 2: Agregar popup
                 return
             
+            sonido_activo = bool(switch_sonido.get())
             pomodoro = nuevo_pomodoro
             descanso_corto = nuevo_descanso_corto
             descanso_largo = nuevo_descanso_largo
@@ -201,28 +212,42 @@ def abrir_configuracion ():
         except ValueError:
             print("ERROR")
     
+    #Creamos una ventana scrolleable 
+    marco_scroll= ctk.CTkScrollableFrame(ventana_config,fg_color="transparent")
+    marco_scroll.pack(pady=(10,5),padx=10,fill="both",expand=True)
+    
     #Cartel Pomodoro
-    ctk.CTkLabel(ventana_config, text="Pomodoro (minutos):", text_color=("black", "white"), font=("Consolas", 14)).pack(pady=(20, 5))
-    entrada_pomodoro = ctk.CTkEntry(ventana_config, width=100, justify="center")
+    ctk.CTkLabel(marco_scroll, text="Pomodoro (minutos):", text_color=("black", "white"), font=("Consolas", 14)).pack(pady=(20, 5))
+    entrada_pomodoro = ctk.CTkEntry(marco_scroll, width=100, justify="center")
     entrada_pomodoro.insert(0, str(pomodoro // 60)) 
     entrada_pomodoro.pack()
 
     #Cartel Descanso Corto
-    ctk.CTkLabel(ventana_config, text="Descanso Corto (minutos):", text_color=("black", "white"), font=("Consolas", 14)).pack(pady=(20, 5))
-    entrada_descanso_corto = ctk.CTkEntry(ventana_config, width=100, justify="center")
+    ctk.CTkLabel(marco_scroll, text="Descanso Corto (minutos):", text_color=("black", "white"), font=("Consolas", 14)).pack(pady=(20, 5))
+    entrada_descanso_corto = ctk.CTkEntry(marco_scroll, width=100, justify="center")
     entrada_descanso_corto.insert(0, str(descanso_corto // 60)) 
     entrada_descanso_corto.pack()
 
     #Cartel Descanso Largo 
-    ctk.CTkLabel(ventana_config, text="Descanso Largo (minutos):", text_color=("black", "white"), font=("Consolas", 14)).pack(pady=(20, 5))
-    entrada_descanso_largo = ctk.CTkEntry(ventana_config, width=100, justify="center")
+    ctk.CTkLabel(marco_scroll, text="Descanso Largo (minutos):", text_color=("black", "white"), font=("Consolas", 14)).pack(pady=(20, 5))
+    entrada_descanso_largo = ctk.CTkEntry(marco_scroll, width=100, justify="center")
     entrada_descanso_largo.insert(0, str(descanso_largo // 60)) 
     entrada_descanso_largo.pack()
+
+    #Interruptor Silencio
+    ctk.CTkLabel(marco_scroll, text="", text_color=("black", "white"), font=("Consolas", 14)).pack(pady=(20, 5))
+    switch_sonido=ctk.CTkSwitch(marco_scroll,text="Campana Activada")
+    if sonido_activo:
+        switch_sonido.select()
+    else:
+        switch_sonido.deselect()
+    switch_sonido.pack()
 
     #Guardar
     boton_guardar = ctk.CTkButton(ventana_config, text="Guardar", fg_color=("black", "white"), text_color=("white", "black"), 
                                   hover_color=("white", "black"), font=("Consolas", 14, "bold"), command=guardar_ajustes)
-    boton_guardar.pack(pady=30)
+    #boton_guardar.pack(pady=30)
+    boton_guardar.pack(side="bottom", pady=(5, 15))
 
 def cambiar_tema():
     modo_actual = ctk.get_appearance_mode()
