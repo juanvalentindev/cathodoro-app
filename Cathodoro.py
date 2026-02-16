@@ -4,29 +4,44 @@ from PIL import Image
 import os
 import sys
 import time 
- 
-#Tiempos en segundos
+import platform 
+
+ ##----------------------------------------Variables Del Temporizador---------------------------------------
+
+#Variables de Tiempo (En segundos)
 pomodoro = 25*60
 descanso_corto= 5*60
 descanso_largo = 10*60
-tick = 1000
+tick = 1
 
-#----------------------------------------Funciónes Del Temporizador---------------------------------------
-
-
+#Variables de funcionamiento
 timer = None
 tiempo = pomodoro
 reps = 1
 corriendo= False
+
+#Variables para conteo de pomodoros/descansos 
 c_pomodoro = 0
 c_descanso = 0
 c_descanso_largo= 0
+
+#Variables para Configuraciones de Widgets
 ventana_config = None
 oracion_visible = False
 
+#Detección del Sistema (Para sonidos)
+sistema_actual = platform.system()
+
+#----------------------------------------Funciónes Del Temporizador---------------------------------------
+
+#Funcion de detección de sistema (Para sonidos)
+if sistema_actual == "Windows":
+    import winsound
+elif sistema_actual == "Linux":
+    import subprocess
+
 def iniciar_contador():
     global tiempo,corriendo,c_pomodoro,c_descanso,c_descanso_largo,timer
-    #condicion_pomodoro.configure(text="Ora et labora...")
     
     if not corriendo:
         corriendo=True
@@ -55,8 +70,6 @@ def rebajar_contador():
     if tiempo > 0:
         tiempo -= 1
     
-    
-
     #Actualización del Cronometro de la GUI
     tiempo_seg = tiempo % 60 #numeros del 1 al 60
     tiempo_min = tiempo // 60 
@@ -71,6 +84,8 @@ def rebajar_contador():
                   #primero corremos el inicio de contador despues de un segundo , y luego en la función de bajar el contador, restamos un segundo, ya que esperamos para entrar otro
         timer = app.after(tick,rebajar_contador) #cada 1000ms ejecuta rebajar contador
     else:
+        print(f"Buscando audio en: {ruta_sonido}")
+        reproducir_sonido(ruta_sonido)
         #Contadores visuales
         if (reps % 8) == 0:
             c_descanso_largo += 1 
@@ -84,6 +99,7 @@ def rebajar_contador():
         corriendo =False
         timer = None
         boton_stop.configure(text="▶", command=iniciar_contador)
+
         if (reps % 2) == 0:
             condicion_pomodoro.configure(text="¡Tiempo! Toca descanso")
         else:
@@ -96,8 +112,9 @@ def parar_contador():
    
     if timer is not None: #Paramos el contador si es que existe un timer activo 
         app.after_cancel(timer)
-        timer = None # Es buena práctica limpiarlo
+        timer = None 
     corriendo = False
+
     boton_stop.configure(text="▶",command=iniciar_contador)
     
 def reset_contador():
@@ -122,13 +139,12 @@ def reset_contador():
     informacion_pomodoro.configure(text=f"Pomodoro {c_pomodoro} | Descanso {c_descanso} | Descanso largo {c_descanso_largo}")
 
 def saltar_instancia():
-  
+    
     global reps, c_pomodoro, c_descanso, c_descanso_largo
     
-   
     parar_contador()
     
-
+    #Nota_dev 1: al saltar la instancia, no se ha terminado el pomodoro, por tanto no tiene sentido aumentar su cantidad...
     if (reps % 8) == 0:
         c_descanso_largo += 1 
     elif (reps % 2) == 0:
@@ -136,42 +152,43 @@ def saltar_instancia():
     else:
         c_pomodoro += 1       
         
-   
     reps += 1
     
-   
     reset_contador()
                 
 def abrir_configuracion ():
 
     global ventana_config,ruta_icono
     
+    #Controla que no se abran mas de una ventana
     if ventana_config is not None and ventana_config.winfo_exists():
         ventana_config.focus()
         return
         
-    
-    
+    #Configuración de la Ventana de Configuración 
     ventana_config = ctk.CTkToplevel(app)
     ventana_config.title("Ajustes")
     ventana_config.geometry("230x335")
     ventana_config.configure(fg_color=("white", "black"))
     ventana_config.attributes("-topmost", True)
 
+    #Busca el icono para la ventana de ajustes
     try:
         ventana_config.after(200, lambda: ventana_config.iconbitmap(ruta_icono))
     except Exception:
-        pass
+        pass #Si no lo encuentra no carga nada
+
 
     def guardar_ajustes():
         global pomodoro,descanso_largo,descanso_corto
+
         try:
             nuevo_pomodoro = int(entrada_pomodoro.get()) * 60
             nuevo_descanso_corto = int(entrada_descanso_corto.get()) * 60
             nuevo_descanso_largo = int(entrada_descanso_largo.get()) * 60
 
             if nuevo_pomodoro <= 0 or nuevo_descanso_corto <= 0 or nuevo_descanso_largo <= 0:
-                print("Los tiempos deben ser mayores a 0")
+                #print("Los tiempos deben ser mayores a 0") #Nota_dev 2: Agregar popup
                 return
             
             pomodoro = nuevo_pomodoro
@@ -180,6 +197,7 @@ def abrir_configuracion ():
 
             reset_contador()
             ventana_config.destroy()
+
         except ValueError:
             print("ERROR")
     
@@ -225,27 +243,40 @@ def cambio_oracion():
         else:
             widget_oracion.place_forget()
             oracion_visible = False
+
+def reproducir_sonido(ruta_sonido):
+
+    if sistema_actual == "Windows":
+        winsound.PlaySound(ruta_sonido,winsound.SND_ASYNC)
+    elif sistema_actual == "Linux":
+        subprocess.Popen(["aplay","-q",ruta_sonido])
+
 #----------------------------------------Configuración del GUI--------------------------------------------
 app = ctk.CTk()
 app.title("Cathodoro")
 ctk.set_appearance_mode("Dark")
 app.configure(fg_color=("white", "black"))
 
-##Variables 
+##Variables de la ventana 
 ANCHO = 500
 LARGO = 600
 
+#Obtención de rutas para las imagenes/sonidos
 if getattr(sys, 'frozen', False):
     ruta_carpeta = os.path.dirname(sys.executable)
 else:
     ruta_carpeta = os.path.dirname(os.path.realpath(__file__))
+
 ruta_imagen_blanca = os.path.join(ruta_carpeta,"assets_pomodoro","imagen_blanca.png")
 ruta_imagen_negra = os.path.join(ruta_carpeta,"assets_pomodoro","imagen_negra.png")
 ruta_icono = os.path.join(ruta_carpeta, "icon.ico")
+ruta_sonido = os.path.join(ruta_carpeta,"wav_pomodoro","pomodoro_ping.wav")
+
 try:
     app.iconbitmap(ruta_icono)
 except Exception:
     pass
+
 #Centrar la ventana al crearse
 ancho_pantalla = app.winfo_screenwidth()
 largo_pantalla = app.winfo_screenheight()
@@ -314,7 +345,6 @@ boton_stop= ctk.CTkButton(
         hover_color=("white", "black"),
         command=iniciar_contador
         )
-#boton_stop.pack(side="left",padx=5, pady=25)
 boton_stop.grid(row=0,column=0,padx=10,pady=10)
 
 #Boton de Reset 
@@ -332,7 +362,6 @@ boton_reset= ctk.CTkButton(
         hover_color=("white", "black"),
         command=reset_contador
         )
-#boton_stop.pack(side="left",padx=5, pady=25)
 boton_reset.grid(row=0,column=1,padx=10,pady=10)
 
 #Boton de Siguiente
@@ -351,7 +380,6 @@ boton_siguiente= ctk.CTkButton(
         hover_color=("white", "black"),
         command=saltar_instancia
         )
-#boton_siguiente.pack(side="right",padx=5, pady=15)
 boton_siguiente.grid(row=0,column=2,padx=10,pady=10)
 
 #...
