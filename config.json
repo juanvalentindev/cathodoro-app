@@ -1,0 +1,6 @@
+{
+    "pomodoro": 2700,
+    "descanso_corto": 300,
+    "descanso_largo": 600,
+    "sonido_activo": true
+}
