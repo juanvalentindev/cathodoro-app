@@ -132,8 +132,6 @@ class CathodoroController:
                 print("Los tiempos deben ser mayores a 0")
                 return 
             
-            if nuevo_pomodoro > 99 or nuevo_corto > 99 or nuevo_largo > 99:
-                return
             
             # Verificamos si cambió algún tiempo para saber si hay que resetear el reloj
             cambio_tiempo = (nuevo_pomodoro != self.modelo.pomodoro or 
